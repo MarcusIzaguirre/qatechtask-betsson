@@ -1,0 +1,339 @@
+{
+	"info": {
+		"_postman_id": "7e7093b1-a4c6-424b-89a9-63d5cb167de9",
+		"name": "Functional testing",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "29175420",
+		"_collection_link": "https://test-api-4956.postman.co/workspace/Petstore-API---Marcus~128638b3-d5b9-49db-b4d3-333a9c5942a6/collection/29175420-7e7093b1-a4c6-424b-89a9-63d5cb167de9?action=share&source=collection_link&creator=29175420"
+	},
+	"item": [
+		{
+			"name": "Create pet",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('200 - It should create a new pet', () => {",
+							"    const { id, name } = pm.response.json()",
+							"    pm.response.to.have.status(200)",
+							"    pm.expect(pm.response.responseTime).to.be.below(900)",
+							"    pm.expect(id).to.equal(Number(pm.environment.get('petId')))",
+							"    pm.expect(id).to.not.be.null",
+							"    pm.expect(name).to.equal(pm.environment.get('petName'))",
+							"",
+							"    })"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"\r",
+							"const id = pm.environment.get('petId') || Math.floor(100000 + Math.random() * 900000);\r",
+							"const name = pm.environment.get('petName') || `doggo-${Math.floor(Math.random() * 100000)}`;\r",
+							"pm.environment.set('petId', String(id));\r",
+							"pm.environment.set('petName', name);\r",
+							"\r",
+							"pm.environment.unset('pollCount');\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"id\": {{petId}},\n  \"name\": \"{{petName}}\",\n  \"status\": \"available\",\n  \"category\": { \"id\": 1, \"name\": \"dogs\" },\n  \"photoUrls\": [\"https://example.com/p.png\"],\n  \"tags\": [{ \"id\": 1, \"name\": \"tag1\" }]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/pet",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"pet"
+					]
+				},
+				"description": "Create a new account and save its id as a collection variable for later use. This account will only be used to transfer money into our \"to\" account."
+			},
+			"response": []
+		},
+		{
+			"name": "Verify a Pet by ID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const status = pm.response.code;",
+							"const max = Number(pm.environment.get('retry_max') || 20);",
+							"let count = Number(pm.environment.get('pollCount') || 0);",
+							"",
+							"",
+							"if (status !== 200 && count < max) {",
+							"  count++;",
+							"  pm.environment.set('pollCount', String(count));",
+							"",
+							"  pm.test(`Polling ${count}/${max} — waiting 200, came ${status}`, () => {",
+							"    pm.expect([200, 404, 400, 202, 204]).to.include(status);",
+							"  });",
+							"",
+							" ",
+							"  postman.setNextRequest(pm.info.requestName);",
+							"  return;",
+							"}",
+							"",
+							"",
+							"pm.environment.unset('pollCount');",
+							"",
+							"",
+							"pm.test('Status 200 after polling', () => {",
+							"  pm.expect(",
+							"    status,",
+							"    `Status final = ${status} after ${max} tries`",
+							"  ).to.eql(200);",
+							"});",
+							"",
+							"",
+							"pm.test('Response time', () => {",
+							"  pm.expect(pm.response.responseTime).to.be.below(1200);",
+							"});",
+							"",
+							"",
+							"const json = pm.response.json();",
+							"pm.test('Body has id and name', () => {",
+							"  pm.expect(json).to.have.property('id');",
+							"  pm.expect(json).to.have.property('name');",
+							"});",
+							"",
+							"const expectedId = Number(pm.environment.get('petId'));",
+							"pm.test('ID returned matches with environment', () => {",
+							"  pm.expect(json.id).to.equal(expectedId);",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"if (!pm.environment.get('pollCount')) {\r",
+							"  pm.environment.set('pollCount', '0');\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/pet/{{petId}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"pet",
+						"{{petId}}"
+					]
+				},
+				"description": "Generate a new API key and save it as a collection variable."
+			},
+			"response": []
+		},
+		{
+			"name": "Delete pet",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('It should delete a pet', () => {\r",
+							"  const code = pm.response.code;\r",
+							"  pm.expect([200, 204, 404]).to.include(code);\r",
+							"\r",
+							"  if (code === 200) {\r",
+							"    let json = {};\r",
+							"    try { json = pm.response.json(); } catch (e) {}\r",
+							"    if (json && json.message) {\r",
+							"      pm.expect(Number(json.message)).to.eql(Number(pm.environment.get('petId')));\r",
+							"    }\r",
+							"  }\r",
+							"\r",
+							"\r",
+							"  pm.environment.unset('petId');\r",
+							"  pm.environment.unset('petName');\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const id = pm.environment.get('petId');\r",
+							"pm.test('Check petId exists to DELETE', () => {\r",
+							"  pm.expect(id, 'petId absent – run POST first').to.exist;\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/pet/{{petId}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"pet",
+						"{{petId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Verify invalid PetId",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"let invalid = pm.environment.get('petId_not_existing');\r",
+							"if (!invalid) {\r",
+							"  invalid = Math.floor(2_000_000 + Math.random() * 900_000);\r",
+							"  pm.environment.set('petId_not_existing', String(invalid));\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Check the error response code', () => {\r",
+							"  pm.expect([404, 400]).to.include(pm.response.code);\r",
+							"});\r",
+							"\r",
+							"pm.test('Check response time', () => {\r",
+							"  pm.expect(pm.response.responseTime).to.be.below(900);\r",
+							"});\r",
+							"\r",
+							"pm.test('Check error payload body', () => {\r",
+							"  const json = pm.response.json();\r",
+							"  pm.expect(json).to.have.property('code').that.is.a('number');\r",
+							"  pm.expect(json).to.have.property('type').that.is.a('string');\r",
+							"  pm.expect(json).to.have.property('message').that.is.a('string');\r",
+							"\r",
+							"  pm.expect(String(json.message).toLowerCase()).to.match(/not found|invalid|numberformatexception/);\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/pet/{{petId_not_existing}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"pet",
+						"{{petId_not_existing}}"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "value",
+				"value": "{{apiKey}}",
+				"type": "string"
+			},
+			{
+				"key": "key",
+				"value": "api-key",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://template.postman-echo.com",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "apiKey",
+			"value": "hRkgiBSD.alY86KwTdRXh2WHrgH1Gs",
+			"disabled": true
+		}
+	]
+}
