@@ -4,10 +4,9 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const BASE_URL = (process.env.BASE_URL ?? 'https://www.saucedemo.com').trim();
-//const BASE_API = (process.env.BASE_API ?? 'https://petstore.swagger.io').trim();
 
 export default defineConfig({
-  testDir: './tests', //global dir
+  testDir: './tests',
   timeout: 30_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -16,10 +15,9 @@ export default defineConfig({
 
   reporter: [
     ['list'],
-    ['html', { outputFolder: 'reports/html', open: 'never' }],
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
   ],
 
- 
   use: {
     headless: true,
     trace: 'on-first-retry',
@@ -29,14 +27,25 @@ export default defineConfig({
   projects: [
     {
       name: 'ui-chrome',
-      testMatch: ['**/ui/specs/**/*.spec.ts'],    
+      testMatch: ['**/ui/specs/**/*.spec.ts'],
       use: { ...devices['Desktop Chrome'], baseURL: BASE_URL, video: 'on', screenshot: 'on' },
+    },
+    {
+      name: 'ui-firefox',
+      testMatch: ['**/ui/specs/**/*.spec.ts'],
+      use: { ...devices['Desktop Firefox'], baseURL: BASE_URL, video: 'on', screenshot: 'on' },
+    },
+    {
+      name: 'ui-safari',
+      testMatch: ['**/ui/specs/**/*.spec.ts'],
+      use: { ...devices['Desktop Safari'], baseURL: BASE_URL, video: 'on', screenshot: 'on' },
     },
     // {
     //   name: 'api',
-    //   testMatch: ['**/api/specs/**/*.spec.ts'],   
-    //   use: { 
-    //     baseURL: BASE_API, trace: 'off', screenshot: 'off', video: 'off' },
+    //   testMatch: ['**/api/specs/**/*.spec.ts'],
+    //   use: {
+    //     baseURL: BASE_API, trace: 'off', screenshot: 'off', video: 'off'
+    //   },
     // },
   ],
 });
